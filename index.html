@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Campo Minado 💖</title>
+<style>
+body{font-family:Arial;text-align:center;background:linear-gradient(135deg,#ffe4ec,#fff)}
+h1{color:#ff69b4}
+#topbar{display:flex;justify-content:center;gap:20px;margin-top:10px;font-weight:bold}
+#controls{margin-top:10px}
+select,button,input{padding:8px;border-radius:10px;border:none;margin:5px}
+button{background:#ff69b4;color:#fff;cursor:pointer}
+#game{display:grid;justify-content:center;margin-top:20px}
+.cell{width:45px;height:45px;border-radius:10px;border:1px solid #ffc0cb;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff0f5;font-weight:bold;transition:0.2s}
+.cell:hover{background:#ffe4ec;transform:scale(1.05)}
+.revealed{background:#ffd6e7}
+.mine{background:#ff4d6d;color:#fff}
+.win{animation:winAnim 0.5s alternate infinite}
+@keyframes winAnim{from{transform:scale(1)}to{transform:scale(1.2)}}
+</style>
+</head>
+<body>
+
+<h1>Campo Minado 💖💣</h1>
+
+<div id="topbar">
+  👤 <span id="player">Jogador</span> | ⏱ <span id="time">0</span>s | 🚩 <span id="flags">0</span>
+</div>
+
+<div id="controls">
+  <input id="name" placeholder="Seu nome" onchange="setName()">
+  <select id="level" onchange="setLevel()">
+    <option value="easy">Fácil</option>
+    <option value="medium">Médio</option>
+    <option value="hard">Difícil</option>
+  </select>
+  <button onclick="startGame()">Reiniciar</button>
+</div>
+
+<div id="game"></div>
+
+<script>
+let size=8,minesCount=10;
+let board=[],timer=0,interval,flags=0,opened=0;
+
+function playSound(type){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const osc=ctx.createOscillator();
+  osc.type='square';
+  osc.frequency.value= type==='win'?600: type==='lose'?100:300;
+  osc.connect(ctx.destination);
+  osc.start();
+  setTimeout(()=>osc.stop(),150);
+}
+
+function setName(){
+  const n=document.getElementById('name').value||'Jogador';
+  document.getElementById('player').innerText=n;
+}
+
+function setLevel(){
+  const lvl=document.getElementById('level').value;
+  if(lvl==='easy'){size=6;minesCount=6}
+  if(lvl==='medium'){size=8;minesCount=10}
+  if(lvl==='hard'){size=10;minesCount=20}
+  startGame();
+}
+
+function startGame(){
+  const game=document.getElementById('game');
+  game.innerHTML='';
+  game.style.gridTemplateColumns=`repeat(${size},45px)`;
+  board=[];timer=0;flags=0;opened=0;
+  document.getElementById('time').innerText=0;
+  document.getElementById('flags').innerText=0;
+  clearInterval(interval);
+  interval=setInterval(()=>{timer++;document.getElementById('time').innerText=timer},1000);
+
+  for(let i=0;i<size*size;i++){board.push({mine:false,revealed:false,flag:false})}
+
+  let placed=0;
+  while(placed<minesCount){let i=Math.floor(Math.random()*board.length);if(!board[i].mine){board[i].mine=true;placed++}}
+
+  board.forEach((c,i)=>{
+    const div=document.createElement('div');
+    div.classList.add('cell');
+    div.onclick=()=>reveal(i,div);
+    div.oncontextmenu=e=>{e.preventDefault();flag(i,div)};
+    game.appendChild(div);
+  });
+}
+
+function flag(i,el){
+  if(board[i].revealed)return;
+  board[i].flag=!board[i].flag;
+  if(board[i].flag){el.innerText='🚩';flags++;playSound('click')}else{el.innerText='';flags--}
+  document.getElementById('flags').innerText=flags;
+}
+
+function reveal(i,el){
+  if(board[i].revealed||board[i].flag)return;
+  board[i].revealed=true;
+  el.classList.add('revealed');
+
+  if(board[i].mine){
+    el.innerText='💣';
+    el.classList.add('mine');
+    clearInterval(interval);
+    playSound('lose');
+    setTimeout(()=>{alert('Você perdeu 😢');startGame()},200);
+    return;
+  }
+
+  opened++;
+  playSound('click');
+  const count=countMines(i);
+  el.innerText=count||'';
+
+  if(opened===size*size-minesCount){
+    clearInterval(interval);
+    playSound('win');
+    document.querySelectorAll('.cell').forEach(c=>c.classList.add('win'));
+    setTimeout(()=>alert('Parabéns! Você venceu 💖🎉'),200);
+  }
+}
+
+function countMines(i){
+  let c=0;
+  const d=[-1,1,-size,size,-size-1,-size+1,size-1,size+1];
+  d.forEach(x=>{let ni=i+x;if(board[ni]&&board[ni].mine)c++});
+  return c;
+}
+
+startGame();
+</script>
+
+</body>
+</html>
